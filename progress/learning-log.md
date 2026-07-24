@@ -129,3 +129,31 @@ Which rows do I want?
 Do multiple conditions apply?
     
 `AND / OR`
+
+## 2026-07-24: Filtering reconrds in SQL
+### Using multiple criteria to filter data
+`OR`: 
+* Filtering multiple criteria but want to meet only one criteria
+```SQL
+SELECT title
+FROM films
+WHERE year = 1994
+    OR year = 2004;
+
+```
+`AND` and `OR`:
+```SQL
+SELECT title
+FROM films
+WHERE (year = 1994 OR year = 2004)
+    AND (year = 2004 OR year = 2003)
+
+```
+`BETWEEN`:
+```SQL
+SELECT title
+FROM films
+WHERE year 
+    BETWEEN 1990 AND 2004;
+--- Inclusive and indicated values are included
+```
