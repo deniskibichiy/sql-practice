@@ -241,14 +241,21 @@ total 23M
 2. Inspection of the source data using pandas to learn about the features of the dataset and converting to csv for easier exporting to postgreSQL
 ```bash
 >>> import pandas as pd
+
 >>> df = pd.read_excel("datasets/online+retail/Online Retail.xlsx")
+
 >>> df.shape
+
 (541909, 8)
+
 >>> df.columns
+
 Index(['InvoiceNo', 'StockCode', 'Description', 'Quantity', 'InvoiceDate',
        'UnitPrice', 'CustomerID', 'Country'],
       dtype='str')
+
 >>> df.dtypes
+
 InvoiceNo              object
 StockCode              object
 Description            object
@@ -258,7 +265,9 @@ UnitPrice             float64
 CustomerID            float64
 Country                   str
 dtype: object
+
 >>> df.isnull().sum()
+
 InvoiceNo           0
 StockCode           0
 Description      1454
@@ -268,7 +277,9 @@ UnitPrice           0
 CustomerID     135080
 Country             0
 dtype: int64
+
 >>> df.head()
+
   InvoiceNo StockCode  ... CustomerID         Country
 0    536365    85123A  ...    17850.0  United Kingdom
 1    536365     71053  ...    17850.0  United Kingdom
@@ -294,3 +305,34 @@ Based on the above dataset inspection, I was able to answer key questions such a
 CREATE SCHEMA IF NOT EXISTS retail;
 ```
 ### Designing the table that will hold the data imported from the csv
+* The designed table is informed by the learned structure of the csv dataset and available at [04_create_online_retail_table.sql](`../setup/04_create_online_retail_table.sql`)
+
+### Ingestion of the data into postgreSQL
+1. Data cleaning to make sure that the csv file is compatible with the defined schema using pandas
+```python
+import pandas as pd
+
+df = pd.read_excel("datasets/online+retail/Online Retail.xlsx")
+df["CustomerID"] = df["CustomerID"].astype("Int64")
+```
+* The above step was necessary because initially I converted the xlsx to csv without converting the `CustomerID` data type to integer. Since the column contained `NULL` values, pandas export represented it with `float64` while in my schema I had designated the `customer_id` field's datatype as `INTEGER`.
+
+2. Importing the csv file into postgreSQL
+```bash
+\COPY retail.online_retail
+FROM '/home/denis/repos_two/sql-practice/datasets/online+retail/online_retail.csv'
+WITH (FORMAT csv, HEADER true);
+```
+### Data type compatibility during ingestion
+
+A key lesson from the first PostgreSQL ingestion attempt was that the PostgreSQL data type must be compatible with the **actual values being loaded**, not merely with what the values conceptually represent.
+
+Although `CustomerID` conceptually represents an integer identifier, Pandas initially represented it as `float64` because the column contained `NULL` values. Consequently, the exported CSV contained values such as `17850.0`, which PostgreSQL could not directly load into an `INTEGER` column.
+
+This resulted in the following error:
+
+`invalid input syntax for type integer: "17850.0"`
+
+The issue demonstrated the importance of inspecting and cleaning source data before ingestion. I resolved it by converting the `CustomerID` column to Pandas' nullable integer type (`Int64`) before exporting the data to CSV.
+
+**Key takeaway:** The destination database schema should be designed according to the intended meaning of the data, but the source data must also be transformed into a representation that is compatible with the destination data types before ingestion.
