@@ -336,3 +336,368 @@ This resulted in the following error:
 The issue demonstrated the importance of inspecting and cleaning source data before ingestion. I resolved it by converting the `CustomerID` column to Pandas' nullable integer type (`Int64`) before exporting the data to CSV.
 
 **Key takeaway:** The destination database schema should be designed according to the intended meaning of the data, but the source data must also be transformed into a representation that is compatible with the destination data types before ingestion.
+### Successful CSV ingestion into PostgreSQL
+
+After resolving the `CustomerID` data type mismatch, the cleaned CSV was successfully imported into the `retail.online_retail` PostgreSQL table.
+
+The ingestion returned:
+
+`COPY 541909`
+
+The imported row count was then verified using `COUNT(*)`, confirming that all 541,909 records were loaded successfully.
+### Summarizing data with aggregate functions
+* The aggregate functions of concern include:
+1. `SUM()`
+2. `AVG`
+3. `MIN()`
+4. `MAX()`
+5. `COUNT()`
+* The aggregrate functions typically come after the `SELECT` keyword.
+### how they are used in queries
+```sql
+
+SELECT AVG(budget)
+FROM films;
+--- returns average of all budget
+SELECT SUM(budget)
+FROM films
+
+SELECT MIN(budget)
+SELECT MAX(budget)
+SELECT COUNT()
+```
+### which ones and how they work in non-numeric functions
+* Only `SUM()` and `AVG()` must be used with numeric fields. The rest can work with datatypes that are not numbers.
+`MIN()` <-> `MAX()`: will behave differently based on what is being handled
+
+1. Alphabet A<-> Z
+2. 1715 <-> 2022
+3. 0 <-> 100
+
+```sql
+SELECT MIN(country)
+FROM films
+--- Afghanistant
+SELECT MAX(country) AS max_country
+FROM films
+--- West Germany
+```
+## 26-7-2026: Summarizing subsets of data
+1. Using `WHERE` with aggregate functions
+```sql
+SELECT MAX(budget) AS max_budget
+FROM films
+WHERE release_year = 2010;
+```
+2. Rounding off values
+```sql
+SELECT ROUND(AVG(budget), 2)
+FROM films
+WHERE release_year = 2010;
+
+---negative parameters in `ROUND()` 
+SELECT ROUND(AVG(budget), -5)
+FROM films
+WHERE release_year = 2010;
+--- causes the rounding to be done to the nearest 10,000
+--- 41100000
+```
+
+### Aliasing with Arithmetics
+* -, +, * , /
+```sql 
+SELECT (4+3)
+SELECT (4-2)
+SELECT (4/3)
+SELECT (4*3)
+```
+* The difference between arithmetic and aggregate functions is that arithmetic functions perform the operations on the records horizontally while aggregate functions perform the operations on fields vertically
+* Aliases must be used with arithmetic functions since the sql does not provide defined fields when it produces results from arithmetic querries.
+```sql 
+SELECT (gross - budget) AS profit
+FROM films
+```
+### Order of execution when arithmetic operations are involved
+1. Step 1: `FROM`
+2. Step 2: `WHERE`
+3. Step 3: `SELECT`
+4. Step 4: `LIMIT`
+5.
+* Aliases defined in the `SELECT` clause cannot be used in the `WHERE` clause due to the order of execution
+
+## 2026-07-27: Sorting and grouping results
+* Makes the data easier to understand
+1. Sorting results with `ORDER BY`: sort results of one or more fields. Written after FROM if written on its own
+
+
+```sql
+SELECT title, budget
+FROM films
+--- Default is ascending order
+WHERE budget IS NOT NULL
+ORDER BY title DESC; --- sort by title alphabetically to sort the results in descending order
+```
+* It is not compulsory to select the fields we are sorting on but it is important to include the field used for sorting for the sake of clarity
+* `ORDER BY` can be used to sort multiple fields. In this case the fields will be sorted by first field, then the subsequent fields 
+* The second sorting field can be thought of as a tie-breaker
+```sql 
+SELECT title, wins, imdb_score
+FROM best_movies
+ORDER BY wins DESC, imdb_score DESC;
+```
+### Order of execution when ORDER BY is used
+1. Step 1: `FROM`
+2. Step 2: `WHERE`
+3. Step 3: `SELECT`
+4. step 4: `ORDER BY`
+5. Step 5: `LIMIT`
+### Grouping data
+* Summarizing data for a particular group of results
+```sql
+SELECT certification, COUNT(title) AS title_count
+FROM films 
+GROUP BY certification;## 2026-07-27: Sorting and grouping results
+* Makes the data easier to understand
+1. `ORDER BY`: sort results of one or more fields. Written after FROM if written on its own
+
+```sql
+SELECT title, budget
+FROM films
+ORDER BY budget; --- Default is ascending order
+WHERE budget IS NOT NULL
+ORDER BY title DESC; --- sort by title alphabetically to sort the results in descending order
+```
+* It is not compulsory to select the fields we are sorting on but it is important to include the field used for sorting for the sake of clarity
+* `ORDER BY` can be used to sort multiple fields. In this case the fields will be sorted by first field, then the subsequent fields 
+* The second sorting field can be thought of as a tie-breaker
+```sql 
+SELECT title, wins, imdb_score
+FROM best_movies
+ORDER BY wins DESC, imdb_score DESC;
+```
+### Order of execution when ORDER BY is used
+1. Step 1: `FROM`
+2. Step 2: `WHERE`
+3. Step 3: `SELECT`
+4. step 4: `ORDER BY`
+5. Step 5: `LIMIT`
+### Grouping data
+* Summarizing data for a particular group of results
+```sql
+SELECT certification, COUNT(title) AS title_count
+FROM films 
+GROUP BY certification;
+```
+* SQL returns an error if a field is selected and is not in the `GROUP BY` clause. 
+```sql 
+SELECT certification, title
+FROM films
+GROUP BY certification;
+--- films.title must appear in the `GROUP BY` clause for it to be used in aggregate function
+
+SELECT 
+    certification, 
+    COUNT(title) AS count_title
+FROM films
+GROUP BY certification
+```
+* `GROUP BY` can be used on multiple fields
+```sql 
+SELECT certification, language, COUNT(title) AS title_count
+FROM films
+GROUP BY certification, language;
+```
+* `GROUP BY` can be used together with `ORDER BY` to enhance summary statistics
+```sql
+SELECT 
+    certification,
+    COUNT(title) AS title_count
+FROM films
+GROUP BY certification
+ORDER BY title_count DESC;
+```
+### Order of execution
+1. Step 1: `FROM`
+2. Step 2: `GROUP BY`
+3. Step 3: `WHERE`
+4. Step 3: `SELECT`
+5. Step 4: `ORDER BY`
+5. Step 4: `LIMIT`
+
+```sql
+-- Find the release_year, country, and max_budget, then group and order by release_year and country
+SELECT release_year, country, MAX(budget) AS max_budget
+FROM films
+GROUP BY release_year, country
+---Using the films table: which release_year had the most language diversity?
+SELECT release_year, COUNT(DISTINCT language) AS distinct_languages
+FROM films
+GROUP BY release_year
+ORDER BY distinct_languages DESC;
+```
+### Filtering grouped data
+* In SQL we can't filter aggregate functions with `WHERE` clauses.
+* `HAVING` clause: special clause available to groups 
+```sql 
+SELECT 
+    release_year,
+    COUNT(title) AS title_count
+FROM films
+GROUP BY release_year
+HAVING COUNT(title) > 10;
+```
+### Order of execution
+1. FROM
+2. WHERE
+3. GROUP BY
+4. HAVING
+5. SELECT
+6. ORDER BY 
+7. LIMIT
+```sql
+--- In what years was the average film duration over two hours?
+SELECT release_year
+FROM films
+GROUP BY release_year
+HAVING AVG(duration) > 120;
+--- Find the country with the most diverse certifications
+-- Select the country and distinct count of certification as certification_count
+SELECT country, COUNT(DISTINCT certification) AS certification_count
+FROM films
+-- Group by country
+GROUP BY country
+-- Filter results to countries with more than 10 different certifications
+HAVING COUNT(DISTINCT certification) > 10
+-- Select the country and average_budget from films
+SELECT country, AVG(budget) AS average_budget
+FROM films
+-- Group by country
+GROUP BY country
+-- Filter to countries with an average_budget of more than one billion
+HAVING AVG(budget) > 1000000000
+-- Order by descending order of the aggregated budget
+ORDER BY average_budget DESC;
+--- In this exercise, you'll write a query that returns the average budget and gross earnings for films each year after 1990 if the average budget is greater than 60 million.
+
+SELECT release_year, AVG(budget) AS avg_budget, AVG(gross) AS avg_gross
+FROM films
+WHERE release_year > 1990
+GROUP BY release_year
+HAVING AVG(budget) > 60000000
+-- Order the results from highest to lowest average gross and limit to one
+ORDER BY avg_gross DESC
+LIMIT 1;
+```
+### Summary of intermediate SQL
+1. Selecting with `COUNT` and `LIMIT`
+2. Filtering with `WHERE`, `BETWEEN`, `AND`, `OR`, `LIKE`, `NOT LIKE`, `IN`, `%`, `_`, `IS NULL`, `IS NOT NULL`
+3. `ROUND` and aggregate functions
+4. Sorting and grouping
+5. Handling errors, handling missing values.
+```
+* SQL returns an error if a field is selected and is not in the `GROUP BY` clause. 
+```sql 
+SELECT certification, title
+FROM films
+GROUP BY certification;
+--- films.title must appear in the `GROUP BY` clause for it to be used in aggregate function
+
+SELECT 
+    certification, 
+    COUNT(title) AS count_title
+FROM films
+GROUP BY certification
+```
+* `GROUP BY` can be used on multiple fields
+```sql 
+SELECT certification, language, COUNT(title) AS title_count
+FROM films
+GROUP BY certification, language;
+```
+* `GROUP BY` can be used together with `ORDER BY` to enhance summary statistics
+```sql
+SELECT 
+    certification,
+    COUNT(title) AS title_count
+FROM films
+GROUP BY certification
+ORDER BY title_count DESC;
+```
+### Order of execution
+1. Step 1: `FROM`
+2. Step 2: `GROUP BY`
+3. Step 3: `WHERE`
+4. Step 3: `SELECT`
+5. Step 4: `ORDER BY`
+5. Step 4: `LIMIT`
+
+```sql
+-- Find the release_year, country, and max_budget, then group and order by release_year and country
+SELECT release_year, country, MAX(budget) AS max_budget
+FROM films
+GROUP BY release_year, country
+---Using the films table: which release_year had the most language diversity?
+SELECT release_year, COUNT(DISTINCT language) AS distinct_languages
+FROM films
+GROUP BY release_year
+ORDER BY distinct_languages DESC;
+```
+### Filtering grouped data
+* In SQL we can't filter aggregate functions with `WHERE` clauses.
+* `HAVING` clause: special clause available to groups 
+```sql 
+SELECT 
+    release_year,
+    COUNT(title) AS title_count
+FROM films
+GROUP BY release_year
+HAVING COUNT(title) > 10;
+```
+### Order of execution
+1. FROM
+2. WHERE
+3. GROUP BY
+4. HAVING
+5. SELECT
+6. ORDER BY 
+7. LIMIT
+```sql
+--- In what years was the average film duration over two hours?
+SELECT release_year
+FROM films
+GROUP BY release_year
+HAVING AVG(duration) > 120;
+--- Find the country with the most diverse certifications
+-- Select the country and distinct count of certification as certification_count
+SELECT country, COUNT(DISTINCT certification) AS certification_count
+FROM films
+-- Group by country
+GROUP BY country
+-- Filter results to countries with more than 10 different certifications
+HAVING COUNT(DISTINCT certification) > 10
+-- Select the country and average_budget from films
+SELECT country, AVG(budget) AS average_budget
+FROM films
+-- Group by country
+GROUP BY country
+-- Filter to countries with an average_budget of more than one billion
+HAVING AVG(budget) > 1000000000
+-- Order by descending order of the aggregated budget
+ORDER BY average_budget DESC;
+--- In this exercise, you'll write a query that returns the average budget and gross earnings for films each year after 1990 if the average budget is greater than 60 million.
+
+SELECT release_year, AVG(budget) AS avg_budget, AVG(gross) AS avg_gross
+FROM films
+WHERE release_year > 1990
+GROUP BY release_year
+HAVING AVG(budget) > 60000000
+-- Order the results from highest to lowest average gross and limit to one
+ORDER BY avg_gross DESC
+LIMIT 1;
+```
+### Summary of intermediate SQL
+1. Selecting with `COUNT` and `LIMIT`
+2. Filtering with `WHERE`, `BETWEEN`, `AND`, `OR`, `LIKE`, `NOT LIKE`, `IN`, `%`, `_`, `IS NULL`, `IS NOT NULL`
+3. `ROUND` and aggregate functions
+4. Sorting and grouping
+5. Handling errors, handling missing values.
