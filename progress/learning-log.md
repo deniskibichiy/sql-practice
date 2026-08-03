@@ -594,3 +594,151 @@ LIMIT 1;
 3. `ROUND` and aggregate functions
 4. Sorting and grouping
 5. Handling errors, handling missing values.
+## 2026- 07- 31
+### Joining data in sql
+* Primary keys play a critical role in joins.
+* You can join on a key field on a key field or any other field.
+1. `INNER JOIN` looks for records in both tables which match on a given field
+```sql
+SELECT prime_ministers.country, prime_ministers.continent, prime_minister, president
+FROM presidents
+INNER JOIN prime_ministers
+ON presidents.country = prime_ministers.country;
+
+SELECT * 
+FROM cities
+-- Inner join to countries
+INNER JOIN countries
+-- Match on country codes
+ON countries.code = cities.country_code;
+
+-- Select name fields (with alias) and region 
+SELECT cities.name AS city, countries.name AS country, region
+FROM cities
+INNER JOIN countries
+ON cities.country_code = countries.code;
+
+-- Select fields with aliases
+SELECT c.code AS country_code, c.name, e.year, e.inflation_rate
+FROM countries AS c
+-- Join to economies (alias e)
+INNER JOIN economies AS e
+-- Match on code field using table aliases
+ON c.code = e.code;
+```
+2. `USING` clause can be used instead of `ON` keyword when both the field names being joined on are the same.
+```sql
+SELECT c.name AS country, l.name AS language, official
+FROM countries AS c
+INNER JOIN languages AS l
+-- Match using the code column
+USING(code);
+```
+### Defining Relationships
+* One to many: A single entity is associated with several entities. This is the most common relationship type, where one record in a table can be associated with multiple records in another. For example, a single artist can produce many songs, similar to how Jane Austen, an author, has written multiple books.
+
+* **One-to-One Relationships:** These relationships involve a uniqu pairing between records in two tables. An example is fingerprint, where each person has unique fingerprint, illustrating the 1-t0-1 relationship between an individual and his fingerprint.
+
+* **Many-to-Many Relationships:** Multiple records in a table can related to multiple records in another. 
+
+## 2026-08-01: Multiple Joins
+### Chaining joins
+* A powerfu feature of SQL is that multiple joins can be combined and ran on a single query.
+```sql
+SELECT * 
+FROM left_table 
+INNER JOIN right_table
+ON left_table.id = right_table.id
+INNER JOIN another_table
+ON left_table.id = another_table.id;
+
+-- e.g
+
+SELECT p1.country, p1.continent, president, prime_minister, pm_start
+FROM prime_ministers AS P1
+INNER JOIN presidents as p2
+USING(country)
+INNER JOIN prime_minister_terms as p3
+USING (prime_minister);
+```
+### Joining on multiple keys
+* It is not always the case that in SQL, tables being joined together have values in the field in one table that correspond to only one instance in the table being joined to. In some cases, the field being joined on meets the query criteria on multiple records. 
+
+* We can limit the records returned by supplying an additional key to join on using the `AND` clause. 
+
+```bash
+# Economies
+econ_id	code	year	income_group	gdp_percapita	gross_savings	inflation_rate	total_investment	unemployment_rate	exports	imports
+1	AFG	2010	Low income	539.667	37.133	2.179	30.402	null	46.394	24.381
+
+#Countries
+code	name	continent	region	surface_area	indep_year	local_name	gov_form	capital	cap_long	cap_lat
+AFG	Afghanistan	Asia	Southern and Central Asia	652090	1919	Afganistan/Afqanestan	Islamic Emirate	Kabul	69.1761	34.5228
+NLD	Netherlands	Europe	Western Europe	41526	1581	Nederland	Constitutional Monarchy	Amsterdam	4.89095	52.3738
+# populations
+pop_id	country_code	year	fertility_rate	life_expectancy	size
+20	ABW	2010	1.704	74.95354	101597
+19	ABW	2015	1.647	75.573586	103889
+```
+### Exercise in consideration of the tables above
+1. Suppose you are interested in the relationship between fertility and unemployment rate. Join tables to return the country name, year, fertility rate, and unemployment rate in a single result from the countries, populations, and economies table
+```sql
+SELECT name, e.year, fertility_rate, unemployment_rate
+FROM countries AS c
+INNER JOIN populations AS p
+ON c.code = p.country_code
+INNER JOIN economies AS e
+ON c.code = e.code
+-- Add an additional joining condition such that you are also joining on year
+	AND e.year = p.year;
+
+```
+## Outer Joins
+* Outer joins can obtain records from other tables even when matches are not found for the fields being joined on.
+### Left Join
+* Left jonis will return all records in the left table, and those records in the right table that match on the joining field provided. 
+```sql 
+SELECT p1.country, primen_minister, president
+FROM prime_ministers AS p1
+LEFT JOIN presidents AS p2
+USING(country);
+--- Selects all countries with prime ministers and presidents if they do or null if they don't have.
+```
+Also called `LEFT OUTER JOIN` 
+```sql
+--- return all countries in the cities table regardless of whether or not they have a match on the countries table.
+SELECT 
+	c1.name AS city, 
+    code, 
+    c2.name AS country,
+    region, 
+    city_proper_pop
+FROM cities AS c1
+-- Join right table (with alias)
+LEFT JOIN countries as c2
+ON c1.country_code = c2.code
+ORDER BY code DESC;
+
+--use AVG() in combination with a LEFT JOIN to determine the average gross domestic product (GDP) per capita by region in 2010.
+
+```
+
+### Right Join
+* Does the reverse. All records are returned for the right table even when matches are not found on the left table in the matching field. Null values are returned on the left value where there is no matching value on the right.
+* Less commonly used because it can always be rewritten as `LEFT JOIN`
+```sql
+
+-- Modify this query to use RIGHT JOIN instead of LEFT JOIN
+-- Modify this query to use RIGHT JOIN instead of LEFT JOIN
+SELECT countries.name AS country, languages.name AS language, percent
+FROM countries
+LEFT JOIN languages
+USING(code)
+ORDER BY language;
+--modified
+SELECT countries.name AS country, languages.name AS language, percent
+FROM languages
+RIGHT JOIN countries
+USING(code)
+ORDER BY language;
+```
