@@ -635,7 +635,7 @@ INNER JOIN languages AS l
 USING(code);
 ```
 ### Defining Relationships
-* One to many: A single entity is associated with several entities. This is the most common relationship type, where one record in a table can be associated with multiple records in another. For example, a single artist can produce many songs, similar to how Jane Austen, an author, has written multiple books.
+* **One to many:** A single entity is associated with several entities. This is the most common relationship type, where one record in a table can be associated with multiple records in another. For example, a single artist can produce many songs, similar to how Jane Austen, an author, has written multiple books.
 
 * **One-to-One Relationships:** These relationships involve a uniqu pairing between records in two tables. An example is fingerprint, where each person has unique fingerprint, illustrating the 1-t0-1 relationship between an individual and his fingerprint.
 
@@ -695,8 +695,9 @@ ON c.code = e.code
 ```
 ## Outer Joins
 * Outer joins can obtain records from other tables even when matches are not found for the fields being joined on.
-### Left Join
-* Left jonis will return all records in the left table, and those records in the right table that match on the joining field provided. 
+### LEFT JOIN or LEFT OUTER JOIN
+* Left jonis will return all records in the left table, and those records in the right table that match on the joining field provided.  If there is no match, the result is `NULL` on the side of the right table. 
+* For example, when joining the a table of countries with a table of capitals using `LEFT JOIN`, all countries will be listed, including those without a capital in the dataset. 
 ```sql 
 SELECT p1.country, primen_minister, president
 FROM prime_ministers AS p1
@@ -704,7 +705,7 @@ LEFT JOIN presidents AS p2
 USING(country);
 --- Selects all countries with prime ministers and presidents if they do or null if they don't have.
 ```
-Also called `LEFT OUTER JOIN` 
+
 ```sql
 --- return all countries in the cities table regardless of whether or not they have a match on the countries table.
 SELECT 
@@ -723,7 +724,7 @@ ORDER BY code DESC;
 
 ```
 
-### Right Join
+### RIGHT JOIN OR RIGHT OUTER JOIN
 * Does the reverse. All records are returned for the right table even when matches are not found on the left table in the matching field. Null values are returned on the left value where there is no matching value on the right.
 * Less commonly used because it can always be rewritten as `LEFT JOIN`
 ```sql
@@ -742,3 +743,384 @@ RIGHT JOIN countries
 USING(code)
 ORDER BY language;
 ```
+# 04-08-2026: Loading the Northwind Dataset into PostgreSQL for Advanced SQL JOIN Operations
+
+## Objectives of the Day
+
+1. Complete the remaining SQL JOIN topics:
+
+   * FULL JOIN
+   * CROSS JOIN
+   * SELF JOIN
+2. Load the Northwind dataset into a local PostgreSQL database using an ETL workflow.
+3. Document the complete loading process, including encountered errors and how they were resolved.
+4. Begin solving realistic SQL problems that involve joining multiple related tables.
+5. Prepare the database for more advanced SQL concepts including aggregation, subqueries, Common Table Expressions (CTEs), and window functions.
+
+Dataset:
+https://github.com/skaiworldwide-oss/import-northwind/blob/master/orders.csv
+
+---
+
+## FULL JOIN
+
+`FULL JOIN` combines the behaviour of both `LEFT JOIN` and `RIGHT JOIN`.
+
+It returns:
+
+* every record from the left table,
+* every record from the right table,
+* matching rows merged together,
+* `NULL` values wherever no corresponding match exists.
+
+Unlike an `INNER JOIN`, records are never discarded simply because they do not have a matching key.
+
+General syntax:
+
+```sql
+SELECT
+    left_table.id,
+    right_table.id
+FROM left_table
+FULL JOIN right_table
+USING(id);
+
+-- equivalent
+FULL OUTER JOIN
+```
+
+Example:
+
+```sql
+SELECT
+    p1.country,
+    prime_minister,
+    president
+FROM prime_ministers AS p1
+FULL JOIN presidents AS p2
+ON p1.country = p2.country;
+```
+
+Suppose the data looked like this:
+
+### countries
+
+| code | country     |
+| ---- | ----------- |
+| AFG  | Afghanistan |
+| ALB  | Albania     |
+| NLD  | Netherlands |
+
+### currencies
+
+| code | basic_unit |
+| ---- | ---------- |
+| AFG  | Afghani    |
+| ALB  | Lek        |
+| USA  | Dollar     |
+
+Result:
+
+| country     | code | basic_unit |
+| ----------- | ---- | ---------- |
+| Afghanistan | AFG  | Afghani    |
+| Albania     | ALB  | Lek        |
+| Netherlands | NLD  | NULL       |
+| NULL        | USA  | Dollar     |
+
+Notice:
+
+* Netherlands has no matching currency.
+* USA has no matching country.
+* Both are preserved.
+
+This is exactly what distinguishes a FULL JOIN from an INNER JOIN.
+
+---
+
+## Practice
+
+```sql
+SELECT
+    name AS country,
+    code,
+    region,
+    basic_unit
+FROM countries
+FULL JOIN currencies
+USING(code)
+WHERE region='North America'
+   OR name IS NULL
+ORDER BY region;
+```
+
+This query keeps
+
+* all North American countries,
+* every unmatched currency.
+
+---
+
+## Comparing FULL, LEFT and INNER JOIN
+
+### FULL JOIN
+
+Returns
+
+* all countries
+* all currencies
+* NULL values for missing matches on either side
+
+```sql
+SELECT
+    name AS country,
+    code,
+    region,
+    basic_unit
+FROM countries
+FULL JOIN currencies
+USING(code)
+WHERE region='North America'
+   OR name IS NULL;
+```
+
+---
+
+### LEFT JOIN
+
+Returns
+
+* every country
+* matching currency information only
+
+```sql
+SELECT
+    name AS country,
+    code,
+    region,
+    basic_unit
+FROM countries
+LEFT JOIN currencies
+USING(code)
+WHERE region='North America'
+   OR name IS NULL;
+```
+
+Since `countries` is the left table, every country is preserved.
+
+---
+
+### INNER JOIN
+
+Returns only records that exist in both tables.
+
+```sql
+SELECT
+    name AS country,
+    code,
+    region,
+    basic_unit
+FROM countries
+INNER JOIN currencies
+USING(code)
+WHERE region='North America'
+   OR name IS NULL;
+```
+
+Any country without a currency and any currency without a country disappear from the result.
+
+---
+
+## Chaining FULL JOINs
+
+SQL joins are not limited to two tables.
+
+As long as tables share a common key, multiple joins can be chained together to produce richer datasets.
+
+Suppose we also have a `languages` table.
+
+```sql
+SELECT
+    c1.name AS country,
+    region,
+    l.name AS language,
+    basic_unit,
+    frac_unit
+FROM countries AS c1
+FULL JOIN languages AS l
+USING(code)
+FULL JOIN currencies AS c2
+USING(code)
+WHERE region LIKE 'M%esia';
+```
+
+This query combines information from
+
+* countries
+* languages
+* currencies
+
+into a single result set.
+
+This idea is fundamental in relational databases because real-world information is intentionally split into multiple related tables.
+
+---
+
+## CROSS JOIN
+
+A `CROSS JOIN` produces every possible combination of rows from two tables.
+
+General syntax:
+
+```sql
+SELECT *
+FROM table1
+CROSS JOIN table2;
+```
+
+If
+
+Table A contains **10** rows
+
+and
+
+Table B contains **5** rows,
+
+the result contains
+
+```
+10 × 5 = 50 rows
+```
+
+Example:
+
+```sql
+SELECT
+    prime_minister,
+    president
+FROM prime_ministers AS p1
+CROSS JOIN presidents AS p2
+WHERE p1.continent='Asia'
+AND p2.continent='South America';
+```
+
+Typical use cases include
+
+* generating combinations,
+* scheduling,
+* recommendation systems,
+* simulation,
+* exhaustive testing.
+
+Unlike other joins, no matching column is required.
+
+---
+
+## SELF JOIN
+
+A SELF JOIN joins a table to itself.
+
+Since SQL cannot distinguish between two references to the same table, aliases are mandatory.
+
+General syntax:
+
+```sql
+SELECT
+    a.column,
+    b.column
+FROM table_name AS a
+JOIN table_name AS b
+ON a.id=b.id;
+```
+
+Example:
+
+```sql
+SELECT
+    p1.country AS country1,
+    p2.country AS country2,
+    p1.continent
+FROM prime_ministers AS p1
+INNER JOIN prime_ministers AS p2
+ON p1.continent=p2.continent
+AND p1.country<>p2.country
+LIMIT 10;
+```
+
+This query finds countries that belong to the same continent.
+
+Common applications include
+
+* employee-manager relationships,
+* organisational hierarchies,
+* prerequisite courses,
+* recommendation graphs,
+* comparing records within the same table.
+
+---
+
+# Transition to the Northwind Database
+
+The previous exercises used small educational datasets to illustrate how different types of joins work.
+
+The Northwind database introduces a realistic business scenario where nearly every query requires joining multiple related tables.
+
+Some important relationships include:
+
+```bash
+Customers
+      │
+      │
+Orders
+      │
+      │
+Order Details
+      │
+      ├──────── Products
+      │               │
+      │               │
+      │          Categories
+      │
+Employees
+      │
+Shippers
+      │
+Suppliers
+```
+
+Example questions that require joins include:
+
+* Which customers placed the highest-value orders?
+* Which employee processed the most orders?
+* Which supplier provides products in each category?
+* Which products generated the highest revenue?
+* Which customers have never placed an order?
+
+Answering these questions requires combining information spread across several related tables, making the Northwind database an excellent environment for mastering SQL joins.
+
+---
+
+# ETL Workflow for Loading Northwind into PostgreSQL
+
+The loading process follows a simple ETL (Extract, Transform, Load) pipeline.
+
+## Extract
+
+* Download the Northwind dataset.
+* Identify all CSV files.
+* Inspect column names and data types.
+
+## Transform
+
+* Clean missing values.
+* Standardize column formats.
+* Convert dates and numeric fields where necessary.
+* Ensure primary and foreign keys remain consistent.
+
+## Load
+
+* Create PostgreSQL tables.
+* Define constraints.
+* Import CSV files.
+* Verify row counts.
+* Test joins between related tables.
