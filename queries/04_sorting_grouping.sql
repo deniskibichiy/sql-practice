@@ -330,14 +330,21 @@ HAVING COUNT(*) > 500;
 -- For transactions where CustomerID is available,
 -- which countries have more than 100 distinct customers?
 -- Return country and distinct customer count.
+SELECT country, COUNT(DISTINCT customer_id) AS distinct_customer_count
+FROM retail.online_retail
+GROUP BY country
+HAVING COUNT(DISTINCT customer_id) > 100;
 
-
--- Q24:
+-- Q24: 
 -- For transactions with a positive quantity,
 -- which countries have a total quantity greater than 10,000?
 -- Return country and total quantity.
 -- Sort from highest to lowest.
-
+SELECT country, COUNT(quantity) AS total_quantity
+FROM retail.online_retail
+GROUP BY country
+HAVING COUNT(quantity) > 10000
+ORDER BY total_quantity DESC;
 
 -- ============================================
 -- SECTION 7: BUSINESS QUESTIONS
