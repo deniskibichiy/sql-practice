@@ -91,3 +91,15 @@ Before importing any CSV dataset, inspect its structure to determine:
 * Whether text fields contain delimiter characters that require proper parsing.
 
 Making these checks before loading a dataset helps prevent parsing errors and ensures the data is imported correctly.
+
+## COPY command
+
+```sql
+
+\COPY northwind.orders
+FROM 'orders.csv'
+WITH(
+FORMAT CSV,
+HEADER,
+DELIMITER '|',
+NULL 'NULL');
