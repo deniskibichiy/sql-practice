@@ -1123,3 +1123,484 @@ The loading process follows a simple ETL (Extract, Transform, Load) pipeline.
 * Import CSV files.
 * Verify row counts.
 * Test joins between related tables.
+
+# 07-09-2026: Set Theory and Joins
+
+## Venn Diagrams and Set Theory
+
+SQL set operations combine the result sets of two `SELECT` statements. Unlike joins, set operations do not match rows using a join condition. Instead, they operate on the rows returned by each query.
+
+The main SQL set operations are:
+
+* `UNION`
+* `UNION ALL`
+* `INTERSECT`
+* `EXCEPT`
+
+---
+
+## `UNION`
+
+`UNION` combines the results of two `SELECT` statements into a single result set and removes duplicate rows.
+
+```sql
+SELECT *
+FROM left_table
+
+UNION
+
+SELECT *
+FROM right_table;
+```
+
+Conceptually:
+
+```text
+left_table
+    +
+right_table
+    ↓
+combined result
+    ↓
+duplicates removed
+```
+
+### Requirements
+
+The two `SELECT` statements must:
+
+1. Return the same number of columns.
+2. Return corresponding columns with compatible data types.
+3. Have corresponding columns in the same order.
+
+The column names of the final result are taken from the **first `SELECT` statement**.
+
+For example:
+
+```sql
+SELECT monarch AS leader, country
+FROM monarchs
+
+UNION
+
+SELECT prime_minister, country
+FROM prime_ministers
+
+ORDER BY country, leader
+LIMIT 10;
+```
+
+The resulting columns will be named:
+
+```text
+leader | country
+```
+
+because those names come from the first `SELECT`.
+
+Importantly, `UNION` does not require a common field between the two queries. It combines rows based on their **position and compatible data types**, not by matching a key.
+
+---
+
+## `UNION ALL`
+
+`UNION ALL` works similarly to `UNION`, but it retains duplicate rows.
+
+```sql
+SELECT *
+FROM left_table
+
+UNION ALL
+
+SELECT *
+FROM right_table;
+```
+
+The difference is:
+
+```text
+UNION
+→ Combine rows
+→ Remove duplicates
+
+UNION ALL
+→ Combine rows
+→ Keep duplicates
+```
+
+Because `UNION ALL` does not perform duplicate elimination, it is generally more efficient when duplicate removal is not required.
+
+---
+
+## `UNION` vs `UNION ALL`
+
+Consider:
+
+```text
+left_table
+
+id
+--
+1
+2
+3
+```
+
+and:
+
+```text
+right_table
+
+id
+--
+3
+4
+5
+```
+
+Using `UNION`:
+
+```sql
+SELECT id FROM left_table
+UNION
+SELECT id FROM right_table;
+```
+
+produces:
+
+```text
+1
+2
+3
+4
+5
+```
+
+Using `UNION ALL`:
+
+```sql
+SELECT id FROM left_table
+UNION ALL
+SELECT id FROM right_table;
+```
+
+produces:
+
+```text
+1
+2
+3
+3
+4
+5
+```
+
+---
+
+# `INTERSECT`
+
+`INTERSECT` returns only the rows that appear in **both** result sets.
+
+```sql
+SELECT id, val
+FROM left_table
+
+INTERSECT
+
+SELECT id, val
+FROM right_table;
+```
+
+Conceptually:
+
+```text
+left_table
+     ∩
+right_table
+     ↓
+common rows
+```
+
+Like `UNION`, `INTERSECT` requires both queries to return:
+
+* The same number of columns.
+* Compatible data types in corresponding positions.
+* Columns in corresponding positions.
+
+`INTERSECT` returns distinct rows by default.
+
+For example:
+
+```text
+left_table     right_table
+----------     -----------
+1              2
+2              3
+3              4
+```
+
+```sql
+SELECT id FROM left_table
+INTERSECT
+SELECT id FROM right_table;
+```
+
+returns:
+
+```text
+2
+3
+```
+
+---
+
+# `INTERSECT` vs `INNER JOIN`
+
+Although `INTERSECT` and `INNER JOIN` can sometimes produce similar results, they operate differently.
+
+### `INTERSECT`
+
+`INTERSECT` compares the **complete rows returned by the two queries**.
+
+```sql
+SELECT id, name
+FROM table_a
+
+INTERSECT
+
+SELECT id, name
+FROM table_b;
+```
+
+A row must match across all selected columns.
+
+It does not allow us to specify:
+
+```sql
+ON table_a.id = table_b.id
+```
+
+Instead, the entire selected row is compared.
+
+### `INNER JOIN`
+
+An `INNER JOIN` combines columns from two tables based on a specified relationship.
+
+```sql
+SELECT a.id, a.name, b.value
+FROM table_a AS a
+INNER JOIN table_b AS b
+    ON a.id = b.id;
+```
+
+The join condition determines which rows match.
+
+An `INNER JOIN` can therefore:
+
+* Return columns from both tables.
+* Produce duplicate rows when multiple rows match.
+* Match tables using specific keys or conditions.
+* Return multiple combinations when the relationship is one-to-many or many-to-many.
+
+The distinction can be summarized as:
+
+```text
+INTERSECT
+→ Find identical rows between two result sets.
+
+INNER JOIN
+→ Match rows based on a specified condition
+  and combine their columns.
+```
+
+---
+
+## Example: `INTERSECT`
+
+Return all cities that have the same name as a country:
+
+```sql
+SELECT name
+FROM cities
+
+INTERSECT
+
+SELECT name
+FROM countries;
+```
+
+Only names appearing in both result sets are returned.
+
+---
+
+# `EXCEPT`
+
+`EXCEPT` returns rows from the first query that do **not** appear in the second query.
+
+```sql
+SELECT *
+FROM left_table
+
+EXCEPT
+
+SELECT *
+FROM right_table;
+```
+
+Conceptually:
+
+```text
+left_table
+    −
+right_table
+    ↓
+rows existing only in left_table
+```
+
+As with the other set operations, both queries must return the same number of columns with compatible data types.
+
+For example:
+
+```text
+left_table     right_table
+----------     -----------
+1              2
+2              3
+3              4
+```
+
+```sql
+SELECT id FROM left_table
+
+EXCEPT
+
+SELECT id FROM right_table;
+```
+
+returns:
+
+```text
+1
+```
+
+---
+
+## Example: `EXCEPT`
+
+Return the names of monarchs who do not appear as prime ministers:
+
+```sql
+SELECT monarch, country
+FROM monarchs
+
+EXCEPT
+
+SELECT prime_minister, country
+FROM prime_ministers;
+```
+
+Here, the complete pair:
+
+```text
+monarch + country
+```
+
+is compared against:
+
+```text
+prime_minister + country
+```
+
+The result contains rows from the first query that have no identical row in the second query.
+
+Another example:
+
+```sql
+SELECT name
+FROM cities
+
+EXCEPT
+
+SELECT name
+FROM countries
+
+ORDER BY name;
+```
+
+This returns cities whose names do not appear among the country names.
+
+---
+
+# Set Operations vs Joins
+
+The fundamental difference is how the result sets are combined.
+
+### Set operations
+
+Set operations combine rows **vertically**:
+
+```text
+Query A
+────────
+row 1
+row 2
+row 3
+
+Query B
+────────
+row 4
+row 5
+row 6
+
+      ↓
+
+Combined result
+───────────────
+row 1
+row 2
+row 3
+row 4
+row 5
+row 6
+```
+
+Examples:
+
+```text
+UNION
+UNION ALL
+INTERSECT
+EXCEPT
+```
+
+### Joins
+
+Joins combine columns **horizontally**:
+
+```text
+Table A                 Table B
+──────────              ──────────
+id | name       +       id | salary
+1  | Denis              1  | 50000
+
+              ↓
+
+id | name  | salary
+1  | Denis | 50000
+```
+
+A join normally uses a condition such as:
+
+```sql
+ON a.id = b.id
+```
+
+Therefore:
+
+> **Set operations combine result sets vertically, while joins combine related rows horizontally.**
+
+
+
+
+
+
