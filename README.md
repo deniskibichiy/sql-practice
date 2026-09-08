@@ -89,7 +89,7 @@ Before importing any CSV dataset, inspect its structure to determine:
 * Whether a header row is present.
 * How missing values are represented.
 * Whether text fields contain delimiter characters that require proper parsing.
-
+"
 Making these checks before loading a dataset helps prevent parsing errors and ensures the data is imported correctly.
 
 ## COPY command
@@ -103,3 +103,54 @@ FORMAT CSV,
 HEADER,
 DELIMITER '|',
 NULL 'NULL');
+
+
+\COPY northwind.regions
+FROM 'regions.csv'
+with (
+    FORMAT csv,
+    HEADER,
+    DELIMITER '|'
+)
+
+\COPY northwind.suppliers FROM 'suppliers.csv' WITH (
+    FORMAT csv,
+    HEADER, 
+    DELIMITER '|'
+)
+
+\COPY northwind.products FROM 'products.csv' WITH(
+    FORMAT csv,
+    HEADER, 
+    DELIMITER '|'
+)
+
+\COPY northwind.employee_territories FROM 'employee-territories.csv' WITH(
+    FORMAT csv,
+    HEADER,
+    DELIMITER '|'
+);
+
+\COPY northwind.categories FROM 'categories_cleaned.csv' WITH(
+    FORMAT csv,
+    HEADER, 
+    DELIMITER ','
+);
+
+\COPY northwind.order_details FROM 'order-details.csv' WITH(
+    FORMAT csv,
+    HEADER,
+    DELIMITER '|'
+);
+
+\COPY northwind.territories FROM 'territories.csv' WITH(
+    FORMAT csv, 
+    HEADER, 
+    DELIMITER '|'
+);
+
+\COPY northwind.shippers FROM 'shippers.csv' WITH(
+    FORMAT csv, 
+    HEADER, 
+    DELIMITER '|'
+);

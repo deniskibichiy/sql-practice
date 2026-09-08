@@ -15,6 +15,12 @@ orders = pd.read_csv(
     header = "infer"
 )
 
+
+#regions
+regions = pd.read_csv(
+    "datasets/Northwind/regions.csv",
+    sep = "|"
+)
 # Transforming columns to remain with only relevant columns
 
 ## Find out how many null values we have in each column
