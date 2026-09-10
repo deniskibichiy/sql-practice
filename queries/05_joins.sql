@@ -11,8 +11,15 @@ company_name
 contact_name
 order_date
 freight
-INNER JOIN — Customer shipping comparison
+*/
+SELECT o.order_id, c.customer_id, c.company_name, c.contact_name, o.order_date, o.freight
+FROM northwind.orders as o 
+INNER JOIN northwind.customers as c 
+USING(customer_id)
+LIMIT 10;
 
+/*
+INNER JOIN — Customer shipping comparison
 Show each order and compare the customer's registered country with the country where the order was shipped.
 
 Required columns:
@@ -95,3 +102,9 @@ GROUP BY c.customer_id
 ORDER BY total_orders DESC 
 LIMIT 20;
 
+SELECT COUNT(customer_id) AS customers_per_region, region
+FROM northwind.customers
+GROUP BY region
+
+
+sql_practice-> ON c.region
