@@ -1599,8 +1599,79 @@ Therefore:
 
 > **Set operations combine result sets vertically, while joins combine related rows horizontally.**
 
+## NESTED SQL Queries: sub-querying with semi joins and anti joins
+
+The joins so far have been all additive in that they add columns to the original left table. 
+
+In some cases however, field with same names are added to the result set but causes duplicate names though aliases can be used. 
+### Semi joins
+A semi join chooses records in the first table where a condition is met in the second table. Return all values from left_table where values of col1 are in col2 in the right table.
+
+```sql
+SELECT president, country, continent
+FROM presidents
+WHERE country IN 
+    (
+        SELECT country
+        FROM states
+        WHERE indpendence_year < 1800
+    );
+
+```
+### Anti joins
+Chooses records in the first table where col1 does not find a record in col2
+
+```sql
+SELECT country, president
+FROM presidents
+WHERE continent LIKE '%America'
+    AND country NOT IN 
+        (SELECT country
+        FROM states
+        WHERE independence_year < 1800);
+
+SELECT DISTINCT name
+FROM languages
+-- Add syntax to use bracketed subquery below as a filter
+WHERE code IN
+    (SELECT code
+    FROM countries
+    WHERE region = 'Middle East')
+ORDER BY name;
+```
+
+# 08-09-2026: Permanently dropping a column from a csv dataset before loading into PSQL
+ ```python
+ import pandas as pd
+
+ data = pd.read_csv("categories.csv", sep="|", header = "infer")
+
+ print(data)
+ data.drop('Picture', inplace = True, axis = 1)
+
+ #After modifying the above, I need to save the modified dataframe back to the file.
+ df.to_csv("categories_cleaned.csv", index= False)
+
+ #Dropping multiple columns from employees
+
+ # Source - https://stackoverflow.com/a/41579847
+# Posted by Prasanth Regupathy, modified by community. See post 'Timeline' for change history
+# Retrieved 2026-09-10, License - CC BY-SA 3.0
+
+flight_data_copy.drop(['TailNum', 'OriginStateFips', 
+                'DestStateFips', 'Diverted'], axis=1, inplace=True)
+cleaned_employees = df.drop(['TitleOfCourtesy','BirthDate', 'HireDate', 'PostalCode', 'HomePhone', 'Extension', 'Photo', 'Notes', 'ReportsTo','PhotoPath'], axis=1, inplace = True)
 
 
+```
+The above code only drops the column from the pandas data frame but the column will still persist in storage. The dataframe is apparently stored in memory for operations. To persist the modifications in disk, I needed to convert the dataframe back to csv and get it ready for loading. 
 
+The main reason is that the original dataset contains a column for picture in categories and I am not interested in loading the pictures to db server. 
 
+## Changing a table's column data type
+
+```bash
+ALTER TABLE northwind.order_details ALTER COLUMN discount TYPE NUMERIC;
+
+```
 
