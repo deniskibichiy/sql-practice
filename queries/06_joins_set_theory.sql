@@ -69,6 +69,15 @@ freight
 
 This should require at least three joins.
 */
+SELECT o.order_id, c.contact_name AS customer_name, CONCAT(e.first_name,' ', e.last_name) AS employee_name, s.company_name AS shipper_name, o.order_date, o.freight
+FROM northwind.orders as o 
+INNER JOIN northwind.employees as e 
+USING(employee_id)
+INNER JOIN northwind.customers as c 
+USING (customer_id)
+INNER JOIN northwind.shippers as s 
+ON o.shipped_VIA = s.shipper_id
+LIMIT 20;
 
 /*
 Part II — Joins + aggregation
@@ -89,6 +98,15 @@ total_spending
 Sort from highest to lowest.
 */
 
+SELECT o.customer_id, c.company_name, c.contact_name, SUM(od.quantity * od.unit_price * (1 - od.discount)) AS total_spending
+FROM northwind.orders as o 
+INNER JOIN northwind.customers AS c
+USING(customer_id)
+INNER JOIN northwind.order_details AS od
+USING(order_id)
+GROUP BY o.customer_id, c.company_name, c.contact_name
+ORDER BY total_spending DESC;
+
 /*
 6. Employee revenue
 
@@ -104,6 +122,15 @@ average_order_value
 
 Only include employees whose total revenue exceeds 10,000.
 */
+SELECT e.employee_id, CONCAT(e.first_name, ' ',e.last_name) AS employee_name, COUNT(*) AS number_of_orders, SUM((od.quantity * od.unit_price * (1 - od.discount))) AS total_revenue, AVG((od.quantity * od.unit_price * (1 - od.discount))) AS average_order_value
+FROM northwind.employees AS e 
+INNER JOIN northwind.orders as o 
+USING(employee_id)
+INNER JOIN northwind.order_details as od 
+USING (order_id)
+GROUP BY e.employee_id, CONCAT(e.first_name, ' ',e.last_name)
+HAVING AVG((od.quantity * od.unit_price * (1 - od.discount))) > 100
+ORDER BY total_revenue DESC;
 
 
 /*
@@ -180,10 +207,11 @@ order_count
 
 Be careful about how you calculate the average.
 */
+
+/*
 Part IV — Set operations
 
-Now deliberately use set theory.
-
+Now deliberately use set theory
 12. Customers who shipped to different countries
 
 Produce two sets:
@@ -191,8 +219,10 @@ Produce two sets:
 Customers whose registered country is Germany.
 Customers whose orders were shipped to Germany.
 
-Use a set operation to determine which customer IDs appear in both sets.
+Use a set operation to determine which customer IDs appear in both sets.*/
 
+
+/*
 13. Countries represented in both datasets
 
 Return country names that appear in both:
@@ -205,6 +235,8 @@ Use INTERSECT.
 Your result should contain one column:
 
 country
+*/
+/*
 14. Countries with customers but no suppliers
 
 Find countries that appear among customers but not among suppliers.
@@ -214,6 +246,9 @@ Use EXCEPT.
 Return:
 
 country
+*/
+
+/*
 15. Combine employee and customer countries
 
 Create a result containing countries represented by either:
@@ -224,6 +259,9 @@ suppliers.
 Duplicates should appear only once.
 
 Use UNION.
+*/
+
+/*
 
 Part V — Anti-joins and existence
 
@@ -246,6 +284,9 @@ company_name
 country
 
 Compare the two queries.
+*/
+
+/*
 
 17. Products never ordered
 
@@ -258,6 +299,9 @@ product_name
 unit_price
 
 Solve it using NOT EXISTS.
+*/
+
+/*
 
 18. Suppliers with no products
 
@@ -270,7 +314,9 @@ company_name
 country
 
 Use either NOT EXISTS or an appropriate outer join.
+*/
 
+/*
 Part VI — Complex relational reasoning
 19. Customers buying above-average products
 
@@ -292,7 +338,9 @@ order_details
 products
 
 and compare product prices against an aggregate obtained separately.
+*/
 
+/*
 20. Customers who bought from every category
 
 Find customers who have purchased products from every product category in the database.
@@ -309,7 +357,9 @@ number of categories purchased by customer
 total number of categories
 
 A combination of joins, COUNT(DISTINCT ...), and a subquery is appropriate.
+*/
 
+/*
 21. Employee with the highest revenue
 
 Determine the employee who generated the highest total revenue.
@@ -323,7 +373,9 @@ total_revenue
 Do not simply use ORDER BY ... LIMIT 1 on the raw orders. First determine revenue per employee, then identify the maximum.
 
 Try solving it using a subquery.
+*/
 
+/*
 22. Products more expensive than their category average
 
 For every product, determine whether its unit price is greater than the average price of products within its own category.
@@ -336,7 +388,9 @@ unit_price
 category_average_price
 
 This is a good test of correlated subqueries or an equivalent join-based solution.
+*/
 
+/*
 Part VII — Final challenge
 23. The Northwind "elite customers"
 
@@ -365,6 +419,9 @@ GROUP BY
 COUNT(DISTINCT)
 +
 subqueries
+*/
+
+/*
 Final challenge: choose the technique
 
 For each of the following, solve the problem using the technique that you think is most appropriate.
@@ -380,6 +437,9 @@ B. EXISTS
 C. IN with a subquery
 
 Then compare the three queries.
+*/
+
+/*
 
 25. Same result, set theory
 
@@ -391,7 +451,9 @@ A. INTERSECT
 B. INNER JOIN
 
 Explain why both can produce the same conceptual result even though they operate differently.
+*/
 
+/*
 26. Final relational problem
 
 Find all customers who:
@@ -407,7 +469,9 @@ customer_id
 company_name
 country
 total_spending
+*/
 
+/*
 This is the capstone. Do not start writing SQL immediately. First break the problem into smaller result sets:
 
 Set 1 → customers with orders
@@ -423,3 +487,4 @@ Set 1
 − Set 4
 
 You can then decide whether implementing those sets literally with INTERSECT/EXCEPT is cleaner than using JOIN/EXISTS/subqueries.
+*/
