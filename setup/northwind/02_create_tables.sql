@@ -92,3 +92,14 @@ CREATE TABLE northwind.shippers(
     company_name VARCHAR(50),
     phone VARCHAR(20)
 );
+
+CREATE TABLE northwind.employees (
+    employee_id SMALLINT,
+    last_name VARCHAR(30),
+    first_name VARCHAR(30),
+    title VARCHAR(30),
+    address VARCHAR(50),
+    city VARCHAR(30),
+    region VARCHAR(30),
+    country VARCHAR(30)
+);
