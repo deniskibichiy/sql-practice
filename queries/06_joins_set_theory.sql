@@ -145,7 +145,15 @@ total_revenue
 
 Order by revenue descending.
  */
+ SELECT c.category_name, COUNT()
  
+
+ FROM northwind.categories AS c 
+ INNER JOIN northwind.orders AS o 
+ USING(category_id)
+ INNER JOIN northwind.order_details AS od 
+ USING(order_id)
+
  /*
 Part III — Subqueries
 
