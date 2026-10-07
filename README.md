@@ -154,3 +154,9 @@ with (
     HEADER, 
     DELIMITER '|'
 );
+
+\COPY northwind.employees FROM 'cleaned_employees.csv' WITH (
+    FORMAT csv,
+    HEADER,
+    DELIMITER ','
+);

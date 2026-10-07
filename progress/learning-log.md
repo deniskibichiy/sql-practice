@@ -1675,3 +1675,59 @@ ALTER TABLE northwind.order_details ALTER COLUMN discount TYPE NUMERIC;
 
 ```
 
+## 2026-10-07: Aggregation, grouping and ranking results
+
+* Aggregate functions such as `SUM()`, `MIN()`, `MAX()`, and `COUNT()` summarize values.
+* Aggregate functions cannot generally be nested directly, e.g. `MIN(SUM(debt))`.
+* When we need to compare an aggregate result between groups, first calculate the aggregate for each group using `GROUP BY`, then use `ORDER BY` to rank the resulting groups.
+
+### Finding the country with the lowest principal repayment
+
+* `DT.AMT.DLXF.CD` identifies principal repayments.
+* A country can have multiple rows for this indicator, so the `debt` values need to be summed for each country first.
+* `GROUP BY` creates one group for each country and indicator.
+* `SUM(debt)` calculates the total principal repayment for each country.
+* `ORDER BY ... ASC` ranks the countries from the lowest total repayment to the highest.
+* `LIMIT 1` returns only the country with the lowest total repayment.
+
+```sql
+SELECT country_name, indicator_name, SUM(debt) AS lowest_repayment
+FROM public.international_debt
+WHERE indicator_code = 'DT.AMT.DLXF.CD'
+GROUP BY country_name, indicator_name
+ORDER BY lowest_repayment ASC
+LIMIT 1;
+```
+
+### Query execution logic
+
+1. `FROM` — select the `international_debt` table.
+2. `WHERE` — keep only rows representing principal repayments.
+3. `GROUP BY` — group the records by country and indicator.
+4. `SUM(debt)` — calculate total principal repayment for each country.
+5. `ORDER BY` — rank the calculated totals from lowest to highest.
+6. `LIMIT 1` — return only the lowest-ranking country.
+
+### Key lesson
+
+When comparing an aggregate value between groups:
+
+```text
+Filter → Group → Aggregate → Sort → Limit
+```
+
+For this problem:
+
+```text
+Principal repayments
+        ↓
+Group by country
+        ↓
+SUM(debt)
+        ↓
+ORDER BY total repayment ASC
+        ↓
+LIMIT 1
+```
+
+The important point is that the question asks for the country with the lowest **total principal repayment**, not simply the single smallest `debt` record.
